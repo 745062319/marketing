@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>2026年公司展会年度排期日历 (更新版)</title>
+    <style>
+        body { font-family: "Microsoft YaHei", sans-serif; background-color: #f4f7f6; margin: 20px; color: #333; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .legend { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; font-size: 14px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .box { width: 16px; height: 16px; border-radius: 3px; }
+        
+        /* 颜色定义 */
+        .bg-domestic { background-color: #e8f5e9; border: 1px solid #4caf50; color: #2e7d32; } /* 国内：绿色系 */
+        .bg-intl { background-color: #e3f2fd; border: 1px solid #2196f3; color: #1565c0; }     /* 国外：蓝色系 */
+        .bg-overlap { background-color: #fff3e0; border: 1px solid #ff9800; color: #ef6c00; }  /* 冲突/重合：橙色系 */
+        .bg-tbc { background-color: #eeeeee; border: 1px solid #999; color: #666; }           /* 待定 */
+
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 20px; 
+        }
+        .month-card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 15px; }
+        .month-title { text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .day-name { font-size: 12px; color: #999; padding-bottom: 5px; }
+        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; border-radius: 4px; position: relative; cursor: pointer; }
+        .day:hover::after { 
+            content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            background: #333; color: #fff; padding: 5px; border-radius: 4px; font-size: 11px; white-space: nowrap; z-index: 10;
+        }
+        .empty { visibility: hidden; }
+
+        .event-list { margin-top: 40px; background: white; padding: 20px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
+        th { background: #f8f9fa; }
+        .tag { padding: 2px 6px; border-radius: 3px; font-size: 12px; font-weight: bold; }
+        .row-tbc { font-style: italic; color: #888; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📅 2026年展会年度排期表</h1>
+    <p>点击日历色块可查看展会名称，详情见下方列表</p>
+</div>
+
+<div class="legend">
+    <div class="legend-item"><div class="box bg-domestic"></div> 国内展会</div>
+    <div class="legend-item"><div class="box bg-intl"></div> 国外展会</div>
+    <div class="legend-item"><div class="box bg-overlap"></div> 同期/多展</div>
+    <div class="legend-item"><div class="box bg-tbc"></div> 待定项目</div>
+</div>
+
+<div class="calendar-grid" id="calendar">
+    <!-- 日历由脚本生成 -->
+</div>
+
+<div class="event-list">
+    <h3>📋 展会详细清单</h3>
+    <table id="eventTable">
+        <thead>
+            <tr>
+                <th>时间</th>
+                <th>类型</th>
+                <th>展会名称</th>
+                <th>地点</th>
+                <th>状态</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 列表由脚本生成 -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // 展会数据
+    const events = [
+        { start: '2026-03-12', end: '2026-03-14', type: '国外', name: '印度南部自动化展', loc: '印度·金奈', status: '已确认' },
+        { start: '2026-03-25', end: '2026-03-27', type: '国内', name: '慕尼黑上海电子生产设备展', loc: '上海·新国际博览中心', status: '已确认' },
+        { start: '2026-04-15', end: '2026-04-17', type: '国内', name: '华南国际瓦楞展', loc: '深圳·深圳会展中心', status: '已确认' },
+        { start: '2026-04-15', end: '2026-04-19', type: '国内', name: '第139届广交会', loc: '广州·琶洲展馆20馆', status: '已确认' },
+        { start: '2026-04-21', end: '2026-04-25', type: '国内', name: '中国国际机床展览会(CIMT)', loc: '上海·新国际博览中心', status: '已确认' },
+        { start: '2026-05-05', end: '2026-05-09', type: '国外', name: '巴西国际机械设备展(FEIMEC)', loc: '巴西·圣保罗', status: '已确认' },
+        { start: '2026-06-10', end: '2026-06-12', type: '国内', name: '华南国际工业自动化展览会', loc: '深圳·深圳会展中心(宝安)', status: '已确认' },
+        { start: '2026-06-10', end: '2026-06-13', type: '国外', name: '土耳其国际工业展(WIN EURASIA)', loc: '土耳其·伊斯坦布尔', status: '已确认' },
+        { start: '2026-06-15', end: '2026-06-17', type: '国内', name: '上海国际加工包装展(ProPak)', loc: '上海国家会展中心', status: '已确认' },
+        { start: '2026-06-17', end: '2026-06-19', type: '国外', name: '越南国际工业及制造业展览会', loc: '越南·平阳省', status: '已确认' },
+        { start: '2026-06-22', end: '2026-06-25', type: '国外', name: '美国国际自动化及机器人展览会', loc: '美国·芝加哥', status: '已确认' },
+        { start: '2026-07-22', end: '2026-07-25', type: '国外', name: '印度工业及自动化展览会', loc: '印度·孟买', status: '已确认' },
+        { start: '2026-09-09', end: '2026-09-11', type: '国内', name: '中国国际光电博览会(CIOE)', loc: '深圳·深圳会展中心(宝安)', status: '已确认' },
+        { start: '2026-10-12', end: '2026-10-16', type: '国内', name: '中国国际工业博览会(CIIF)', loc: '上海·国家会展中心', status: '已确认' },
+        { start: '2026-10-12', end: '2026-10-16', type: '国内', name: '中国国际全印展', loc: '上海·新国际博览中心', status: '已确认' },
+        { start: '2026-10-15', end: '2026-10-19', type: '国内', name: '第140届广交会', loc: '广州·琶洲展馆20馆', status: '已确认' },
+        { start: '2026-11-20', end: '2026-11-24', type: '国内', name: '中国国际纺织机械展(CITME)', loc: '上海·国家会展中心', status: '已确认' },
+        { start: '2026-11-23', end: '2026-11-26', type: '国外', name: '印度设备工具展Engitech', loc: '印度·Rajkot', status: '已确认' },
+        { start: '2026-11-24', end: '2026-11-26', type: '国外', name: '德国国际工业自动化展览会(SPS)', loc: '德国·纽伦堡', status: '已确认' },
+        { start: '2026-12-10', end: '2026-12-13', type: '国外', name: 'Luna印度包装展 Intrapac', loc: '待定', status: '已确认' },
+        { start: 'TBC', end: 'TBC', type: '国外', name: 'Pune区域新代理商行业展会', loc: '印度·浦那', status: '待定 (TBC)' }
+    ];
+
+    function generateCalendar() {
+        const container = document.getElementById('calendar');
+        const tableBody = document.querySelector('#eventTable tbody');
+        
+        // 生成表格列表
+        events.forEach(e => {
+            const dateStr = (e.start === 'TBC') ? '待定' : `${e.start} 至 ${e.end.split('-').pop()}日`;
+            const rowClass = (e.start === 'TBC') ? 'class="row-tbc"' : '';
+            const row = `<tr ${rowClass}>
+                <td>${dateStr}</td>
+                <td><span class="tag ${e.type==='国内'?'bg-domestic':'bg-intl'}">${e.type}</span></td>
+                <td>${e.name}</td>
+                <td>${e.loc}</td>
+                <td><strong>${e.status}</strong></td>
+            </tr>`;
+            tableBody.innerHTML += row;
+        });
+
+        // 生成12个月份
+        for (let month = 0; month < 12; month++) {
+            const date = new Date(2026, month, 1);
+            const monthName = date.toLocaleString('zh-CN', { month: 'long' });
+            
+            let card = `<div class="month-card"><div class="month-title">2026年 ${monthName}</div>`;
+            card += `<div class="days-grid">
+                <div class="day-name">日</div><div class="day-name">一</div><div class="day-name">二</div>
+                <div class="day-name">三</div><div class="day-name">四</div><div class="day-name">五</div><div class="day-name">六</div>`;
+            
+            const firstDay = date.getDay();
+            const daysInMonth = new Date(2026, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) card += `<div class="day empty"></div>`;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const currentStr = `2026-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                // 仅筛选有具体日期的展会
+                const activeEvents = events.filter(e => e.start !== 'TBC' && currentStr >= e.start && currentStr <= e.end);
+                
+                let className = "";
+                let tip = "";
+                if (activeEvents.length > 1) {
+                    className = "bg-overlap";
+                    tip = activeEvents.map(e => e.name).join(' | ');
+                } else if (activeEvents.length === 1) {
+                    className = activeEvents[0].type === '国内' ? 'bg-domestic' : 'bg-intl';
+                    tip = activeEvents[0].name;
+                }
+
+                card += `<div class="day ${className}" data-tip="${tip}">${d}</div>`;
+            }
+            card += `</div></div>`;
+            container.innerHTML += card;
+        }
+    }
+
+    generateCalendar();
+</script>
+
+</body>
+</html>
