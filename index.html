@@ -244,9 +244,36 @@
   @media (max-width:1100px){
     .sidebar{display:none}.layout{padding:20px}.daily-grid{grid-template-columns:1fr}
   }
+
+  /* ===== 访问密码遮罩 ===== */
+  #gate{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#eef2f7,#e2e8f0);display:flex;align-items:center;justify-content:center}
+  #gate.hide{display:none}
+  .gate-card{width:360px;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(31,41,55,.12);padding:36px 32px 30px;text-align:center;border:1px solid var(--border)}
+  .gate-logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#4a7fc7,#2a9d8f);margin:0 auto 18px;display:flex;align-items:center;justify-content:center}
+  .gate-title{font-size:17px;font-weight:600;color:var(--text-1);margin-bottom:4px}
+  .gate-sub{font-size:12px;color:var(--text-3);margin-bottom:22px}
+  .gate-input{width:100%;padding:11px 14px;border:1.5px solid var(--border-strong);border-radius:9px;font-size:14px;outline:none;transition:border-color .15s;text-align:center;letter-spacing:2px}
+  .gate-input:focus{border-color:var(--blue)}
+  .gate-btn{width:100%;margin-top:14px;padding:11px;border:none;border-radius:9px;background:linear-gradient(135deg,#4a7fc7,#2a9d8f);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s}
+  .gate-btn:hover{opacity:.92}
+  .gate-err{color:#e0413f;font-size:12px;margin-top:10px;min-height:16px}
+  .gate-hint{font-size:11px;color:var(--text-4);margin-top:18px}
 </style>
 </head>
 <body>
+
+<!-- 访问密码遮罩：首次访问需输入密码，验证后本地记住，后续免输 -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-logo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 13l4-4 4 4 4-6 4 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4" cy="13" r="1.6" fill="#fff"/><circle cx="20" cy="13" r="1.6" fill="#fff"/></svg></div>
+    <div class="gate-title">市场部任务与项目运营平台</div>
+    <div class="gate-sub">请输入访问密码</div>
+    <input class="gate-input" id="gateInput" type="password" placeholder="请输入密码" autocomplete="off">
+    <button class="gate-btn" id="gateBtn" onclick="gateCheck()">进入平台</button>
+    <div class="gate-err" id="gateErr"></div>
+    <div class="gate-hint">验证后本设备将自动记住，无需重复输入</div>
+  </div>
+</div>
 
 <header class="topbar">
   <div class="topbar-inner">
@@ -331,6 +358,32 @@
 </div>
 
 <script>
+/* ============ 访问密码门禁（纯前端，localStorage 记住） ============ */
+const GATE_PASS = 'flexem';
+const GATE_KEY  = 'mkt-gate-passed';
+function gateCheck(){
+  const val = document.getElementById('gateInput').value.trim();
+  if(val === GATE_PASS){
+    localStorage.setItem(GATE_KEY, '1');
+    document.getElementById('gate').classList.add('hide');
+  } else {
+    const err = document.getElementById('gateErr');
+    err.textContent = '密码错误，请重新输入';
+    document.getElementById('gateInput').value = '';
+    document.getElementById('gateInput').focus();
+  }
+}
+(function gateInit(){
+  if(localStorage.getItem(GATE_KEY) === '1'){
+    document.getElementById('gate').classList.add('hide');
+  } else {
+    /* 遮罩显示时阻止底层内容交互，回车提交 */
+    const inp = document.getElementById('gateInput');
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); gateCheck(); } });
+    setTimeout(()=>inp.focus(), 50);
+  }
+})();
+
 /* ============ 类型与成员 ============ */
 const TYPE_MAP = {
   online: {name:'线上营销',bg:'#e9f0fb',text:'#2c5fa8',border:'#cfdcf2'},
