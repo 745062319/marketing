@@ -357,6 +357,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============ 访问密码门禁（纯前端，localStorage 记住） ============ */
 const GATE_PASS = 'flexem';
@@ -575,10 +576,80 @@ let dailyTaskData = [
   ]}
 ];
 
-/* ============ 持久化 ============ */
+/* ============ 持久化（localStorage 本地 + Supabase 云端同步） ============ */
 const STORAGE_KEY = 'mkt-ops-platform-v12';
-function saveData(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({main:mainTaskData, side:sideTasks, daily:dailyTaskData})); }catch(e){} }
-function loadData(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ const d = JSON.parse(raw); mainTaskData=d.main; sideTasks=d.side; dailyTaskData=d.daily; } }catch(e){} }
+
+/* ↓↓↓ Supabase 配置 — 填入你的项目 URL 和 anon key 后即启用云端同步 ↓↓↓ */
+const SUPABASE_URL = 'https://cocrmnprheyuqitkycpd.supabase.co/rest/v1/';   // 例: 'https://xxxxx.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_sTW39B_KWFz1fnMx7Yrfig_PPRCIfYd';   // 例: 'eyJhbGciOi...'  (anon public key)
+/* ↑↑↑ 两个值都为空时，自动退回纯本地 localStorage 模式 ↑↑↑ */
+
+let supabaseClient = null;
+if(SUPABASE_URL && SUPABASE_KEY && window.supabase){
+  try{ supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }catch(e){ console.warn('Supabase 初始化失败:', e); }
+}
+
+/* 同步状态指示器 */
+let _syncEl = null;
+function setSyncStatus(status){
+  if(!_syncEl){
+    _syncEl = document.createElement('span');
+    _syncEl.style.cssText = 'font-size:12px;color:var(--text-3);margin-left:10px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap';
+    const tag = document.getElementById('todayTag');
+    if(tag) tag.parentElement.insertBefore(_syncEl, tag);
+  }
+  const map = {
+    syncing: {txt:'同步中…', color:'#b06a28'},
+    synced:  {txt:'已同步', color:'#2a9d8f'},
+    offline: {txt:'离线模式', color:'#8a94a6'},
+    error:   {txt:'同步失败', color:'#e0413f'}
+  };
+  const s = map[status] || map.offline;
+  _syncEl.innerHTML = `<span style="width:6px;height:6px;border-radius:50%;background:${s.color};display:inline-block"></span><span style="color:${s.color}">${s.txt}</span>`;
+}
+
+/* 云端保存（异步，不阻塞 UI） */
+let _saveTimer = null;
+function cloudSave(){
+  if(!supabaseClient){ setSyncStatus('offline'); return; }
+  setSyncStatus('syncing');
+  const payload = {main:mainTaskData, side:sideTasks, daily:dailyTaskData};
+  supabaseClient.from('platform_data')
+    .upsert({id:'main', data:payload, updated_at:new Date().toISOString()})
+    .then(({error})=>{
+      if(error){ console.warn('云同步保存失败:', error); setSyncStatus('error'); }
+      else setSyncStatus('synced');
+    })
+    .catch(e=>{ console.warn('云同步异常:', e); setSyncStatus('error'); });
+}
+
+/* 本地存储（同步） */
+function saveData(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({main:mainTaskData, side:sideTasks, daily:dailyTaskData})); }catch(e){}
+  cloudSave();  /* 后台推云端 */
+}
+
+/* 加载数据：优先云端，失败回退本地 */
+async function loadData(){
+  if(supabaseClient){
+    setSyncStatus('syncing');
+    try{
+      const { data, error } = await supabaseClient.from('platform_data').select('data').eq('id','main').single();
+      if(!error && data && data.data){
+        const d = data.data;
+        mainTaskData = d.main || mainTaskData;
+        sideTasks = d.side || sideTasks;
+        dailyTaskData = d.daily || dailyTaskData;
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({main:mainTaskData, side:sideTasks, daily:dailyTaskData})); }catch(e){}
+        setSyncStatus('synced');
+        return;
+      }
+    }catch(e){ console.warn('云端加载失败，回退本地:', e); }
+  }
+  /* 本地回退 */
+  try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ const d = JSON.parse(raw); mainTaskData=d.main; sideTasks=d.side; dailyTaskData=d.daily; } }catch(e){}
+  setSyncStatus(supabaseClient ? 'error' : 'offline');
+}
 
 /* ============ 渲染：主线 ============ */
 function renderMain(){
@@ -1320,8 +1391,17 @@ document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click', ()=>
   document.getElementById('todayTag').textContent = txt;
 })();
 
-loadData();
-renderAll();
+/* 异步加载数据（云端优先），加载完再渲染 */
+(async function initLoad(){
+  const loading = document.createElement('div');
+  loading.id = 'appLoading';
+  loading.style.cssText = 'position:fixed;inset:0;z-index:9000;background:#f4f5f7;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px';
+  loading.innerHTML = '<div style="width:36px;height:36px;border:3px solid #e0e4ea;border-top-color:#4a7fc7;border-radius:50%;animation:spin .8s linear infinite"></div><div style="color:#5b6573;font-size:14px">正在加载数据…</div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+  document.body.appendChild(loading);
+  await loadData();
+  renderAll();
+  loading.remove();
+})();
 </script>
 </body>
 </html>
