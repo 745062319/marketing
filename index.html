@@ -128,7 +128,7 @@
   .freq-pill.weekly{background:#e9f5f2;color:#1e7a6e;border:1px solid #cfe7e0}
   .freq-pill.monthly{background:#f1ecf8;color:#6e4fa3;border:1px solid #ddd0ee}
   .daily-count{font-size:12px;color:var(--text-3);margin-left:auto}
-  .daily-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .daily-grid{display:flex;flex-direction:column}
   .daily-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;transition:border-color .15s,box-shadow .15s}
   .daily-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-md)}
   .daily-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;gap:8px}
@@ -142,7 +142,7 @@
   .daily-owner{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-2)}
   .daily-owner .avatar{width:24px;height:24px;font-size:10px;border-width:1.5px;margin:0}
   .daily-progress{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2)}
-  .progress-text{background:#f7f8fa;padding:3px 9px;border-radius:5px}
+  .progress-text{background:#f7f8fa;padding:3px 9px;border-radius:5px;flex-shrink:0;white-space:nowrap}
   .progress-text .p-done{color:var(--teal);font-weight:600}
   .check-btn{width:26px;height:26px;border-radius:6px;border:1.5px solid #c6ccd6;background:#fff;display:flex;align-items:center;justify-content:center;transition:all .15s}
   .check-btn:hover{border-color:var(--teal);background:#f3faf8}
@@ -185,7 +185,7 @@
   .star-btn svg{width:13px;height:13px}
   .star-btn.mini{padding:3px;border-radius:5px}
   .star-btn.mini svg{width:14px;height:14px}
-  .day-checks{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+  .day-checks{display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex-shrink:0}
   .day-check{width:22px;height:22px;border-radius:5px;border:1.6px solid #c6ccd6;background:#fff;display:flex;align-items:center;justify-content:center;transition:all .15s}
   .day-check:hover{border-color:var(--teal)}
   .day-check svg{width:12px;height:12px;opacity:0;transform:scale(.5);transition:all .15s}
@@ -731,28 +731,21 @@ function renderDailyCard(t, freq){
   const freqLabel = {daily:'每日',weekly:'每周',monthly:'每月'}[freq];
   const checks = Array.from({length:t.weekTotal},(_,i)=>`<button class="day-check${i<t.weekDone?' done':''}" onclick="dailyToggle('${t.id}',${i})" aria-label="第${i+1}次" title="第${i+1}次"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.2 3.2L13 4.8" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join('');
   const owners = t.owners || [t.owner];
-  const ownerHtml = owners.map((m,i)=>avatarSmall(m)).join('');
+  const ownerHtml = owners.map((m,i)=>avatar(m,i)).join('');
   return `
-    <div class="daily-card${complete?' complete':''}" data-id="${t.id}" data-members="${owners.join(',')}">
-      <div class="daily-top">
-        <div class="daily-left"><span class="freq-pill ${freq}">${freqLabel}</span></div>
-        <div class="daily-actions">
-          ${starBtn('daily',t)}
-          <button class="icon-btn" onclick="duplicateTask('daily','${t.id}')" title="复制"><svg viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 11V3.5A1.5 1.5 0 0 1 4.5 2H11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
-          <button class="icon-btn" onclick="openEditor('daily','${t.id}')" title="编辑"><svg viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5l2 2L5 13H3v-2l8.5-8.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
-          <button class="icon-btn del" onclick="deleteTask('daily','${t.id}')" title="删除"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6.5 4V2.5h3V4M5 4l.5 9h5L11 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        </div>
+    <article class="task-card${complete?' done':''}" data-id="${t.id}" data-board="daily" data-members="${owners.join(',')}">
+      <div class="card-row">
+        <span class="freq-pill ${freq}">${freqLabel}</span>
+        <div class="task-info"><div class="task-name">${t.name}</div>${t.desc?`<span class="task-project">${t.desc}</span>`:''}</div>
+        <div class="task-avatars">${ownerHtml}</div>
+        <div class="day-checks">${checks}</div>
+        <span class="progress-text"><span class="p-done">${t.weekDone}</span>/${t.weekTotal}</span>
+        ${starBtn('daily',t)}
+        <button class="icon-btn" onclick="duplicateTask('daily','${t.id}')" title="复制"><svg viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 11V3.5A1.5 1.5 0 0 1 4.5 2H11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+        <button class="icon-btn" onclick="openEditor('daily','${t.id}')" title="编辑"><svg viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5l2 2L5 13H3v-2l8.5-8.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
+        <button class="icon-btn del" onclick="deleteTask('daily','${t.id}')" title="删除"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6.5 4V2.5h3V4M5 4l.5 9h5L11 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
-      <div class="daily-name">${t.name}</div>
-      <div class="daily-desc">${t.desc}</div>
-      <div class="daily-bottom">
-        <div class="daily-owner">${ownerHtml}</div>
-        <div class="daily-progress">
-          <div class="day-checks">${checks}</div>
-          <span class="progress-text"><span class="p-done">${t.weekDone}</span>/${t.weekTotal}</span>
-        </div>
-      </div>
-    </div>`;
+    </article>`;
 }
 
 /* ============ 重要提醒（手动星标，可忽略/恢复） ============ */
@@ -842,22 +835,45 @@ function buildImportant(){
       else if(isAuto) list.push({board:'side', id:t.id, idx:-1, name:t.name, project:t.project||'', due, days, members:t.members, source:'auto'});
     });
   } else if(currentBoard==='daily'){
-    const now = new Date();
-    const dow = now.getDay(); // 0=Sun ... 4=Thu, 5=Fri, 6=Sat
+    const now = TODAY;
+    const dow = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const todayW = dow === 0 ? 7 : dow; // Mon=1, ..., Sun=7
     const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-    const isLastWeek = daysInMonth - now.getDate() < 7;
+    const todayDay = now.getDate();
     dailyTaskData.forEach(g=>g.tasks.forEach(t=>{
       const isStar = t.starred && !t.ignored;
       const owners = t.owners || [t.owner];
-      // auto reminder rules by frequency
       let isAuto = false;
-      if(!t.autoIgnored){
-        if(g.freq==='daily') isAuto = true;
-        else if(g.freq==='weekly') isAuto = (dow===4 || dow===5); // Thu/Fri
-        else if(g.freq==='monthly') isAuto = isLastWeek;
+      let due = null;
+      let days = null;
+      if(!t.autoIgnored && t.weekDone < t.weekTotal){
+        const nextCount = t.weekDone + 1; /* 下一次未完成的序号 */
+        if(g.freq==='daily'){
+          isAuto = true; /* 每日未完成始终提醒 */
+        } else if(g.freq==='weekly'){
+          /* 将一周5个工作日平均分配，计算本次截止的星期几 (1=周一 ... 5=周五) */
+          const dueWeekday = Math.ceil(5 * nextCount / t.weekTotal);
+          /* 计算本周该星期的实际日期 */
+          const monday = new Date(now);
+          monday.setDate(now.getDate() - (todayW - 1));
+          const dueDate = new Date(monday);
+          dueDate.setDate(monday.getDate() + (dueWeekday - 1));
+          due = dueDate;
+          days = dayDiff(due);
+          /* 截止前一天开始提醒 */
+          isAuto = todayW >= (dueWeekday - 1);
+        } else if(g.freq==='monthly'){
+          /* 将当月天数平均分配，计算本次截止的日期 */
+          const dueDay = Math.ceil(daysInMonth * nextCount / t.weekTotal);
+          const dueDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
+          due = dueDate;
+          days = dayDiff(due);
+          /* 截止前一天开始提醒 */
+          isAuto = todayDay >= (dueDay - 1);
+        }
       }
       if(isStar) list.push({board:'daily', id:t.id, idx:-1, name:t.name, project:g.group, due:null, days:null, members:owners, source:'star'});
-      else if(isAuto) list.push({board:'daily', id:t.id, idx:-1, name:t.name, project:g.group, due:null, days:null, freq:g.freq, members:owners, source:'auto'});
+      else if(isAuto) list.push({board:'daily', id:t.id, idx:-1, name:t.name, project:g.group, due, days, freq:g.freq, members:owners, source:'auto'});
     }));
   }
   list.sort((a,b)=> importanceRank(a) - importanceRank(b));
@@ -914,7 +930,7 @@ function jumpTo(board, id){
   if(board !== currentBoard) switchBoard(board);
   setTimeout(()=>{
     let target = document.querySelector(`.task-card[data-id="${id}"][data-board="${board}"]`);
-    if(!target) target = document.querySelector(`.daily-card[data-id="${id}"]`);
+    if(!target) target = document.querySelector(`.task-card[data-board="daily"][data-id="${id}"]`);
     if(!target) return;
     target.scrollIntoView({behavior:'smooth', block:'center'});
     if(board==='main'){
@@ -980,7 +996,7 @@ function dailyToggle(id, idx){
     if(t){
       if(idx < t.weekDone) t.weekDone = idx;
       else t.weekDone = idx + 1;
-      const card = document.querySelector(`.daily-card[data-id="${id}"]`);
+      const card = document.querySelector(`.task-card[data-board="daily"][data-id="${id}"]`);
       if(card) card.outerHTML = renderDailyCard(t, g.freq);
       saveData(); renderReminders();
       break;
@@ -1064,12 +1080,7 @@ function toggleFilter(person){
 }
 function applyFilter(){
   const sel = currentFilters;
-  document.querySelectorAll('.task-card[data-board="main"], .task-card[data-board="side"]').forEach(card=>{
-    const members = (card.dataset.members||'').split(',');
-    const match = sel.length===0 || sel.some(p=>members.includes(p));
-    card.classList.toggle('hidden', !match);
-  });
-  document.querySelectorAll('.daily-card').forEach(card=>{
+  document.querySelectorAll('.task-card').forEach(card=>{
     const members = (card.dataset.members||'').split(',');
     const match = sel.length===0 || sel.some(p=>members.includes(p));
     card.classList.toggle('hidden', !match);
@@ -1080,7 +1091,7 @@ function applyFilter(){
 function updateCounts(){
   const mainVis = document.querySelectorAll('.task-card[data-board="main"]:not(.hidden)').length;
   const sideVis = document.querySelectorAll('.task-card[data-board="side"]:not(.hidden)').length;
-  const dailyVis = document.querySelectorAll('.daily-card:not(.hidden)').length;
+  const dailyVis = document.querySelectorAll('.task-card[data-board="daily"]:not(.hidden)').length;
   document.getElementById('cnt-main').textContent = mainVis;
   document.getElementById('cnt-side').textContent = sideVis;
   document.getElementById('cnt-daily').textContent = dailyVis;
@@ -1091,8 +1102,8 @@ function updateCounts(){
     group.style.display = vis>0?'':'none';
   });
   document.querySelectorAll('.daily-group').forEach(group=>{
-    const vis = group.querySelectorAll('.daily-card:not(.hidden)').length;
-    const total = group.querySelectorAll('.daily-card').length;
+    const vis = group.querySelectorAll('.task-card[data-board="daily"]:not(.hidden)').length;
+    const total = group.querySelectorAll('.task-card[data-board="daily"]').length;
     group.querySelector('.daily-count').textContent = vis>0 ? vis+' 项' : (total>0?'已筛选隐藏':'暂无任务');
     group.style.display = vis>0?'':'none';
   });
